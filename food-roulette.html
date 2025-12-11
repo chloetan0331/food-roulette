@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="UTF-8" />
+  <title>美食轮盘 Food Roulette</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #111827;
+      --accent: #f97316;
+      --accent-soft: rgba(249, 115, 22, 0.2);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --radius-lg: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      background: radial-gradient(circle at top, #1f2937 0, #020617 55%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 900px;
+      background: linear-gradient(145deg, #020617, #020617, #0b1120);
+      border-radius: 24px;
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      padding: 20px 18px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .app {
+        padding: 16px;
+      }
+    }
+
+    .header {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    h1 {
+      font-size: 1.4rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      padding: 3px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(248, 250, 252, 0.18);
+      background: radial-gradient(circle at top, rgba(248, 250, 252, 0.12), transparent);
+      color: var(--muted);
+    }
+
+    .subtitle {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .controls {
+      width: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top left, rgba(30, 64, 175, 0.5), transparent),
+        rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .controls-section {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .meal-toggle {
+      display: inline-flex;
+      padding: 3px;
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+    }
+
+    .meal-toggle button {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding: 5px 12px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: all 0.18s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .meal-toggle button.active {
+      background: radial-gradient(circle at top, rgba(249, 115, 22, 0.18), transparent);
+      color: #fed7aa;
+      box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.4),
+        0 8px 20px rgba(249, 115, 22, 0.35);
+    }
+
+    select {
+      background: rgba(15, 23, 42, 0.9);
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      padding: 5px 14px 5px 10px;
+      color: var(--text);
+      font-size: 0.82rem;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      position: relative;
+    }
+
+    .select-wrapper {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .select-wrapper::after {
+      content: "▾";
+      position: absolute;
+      right: 9px;
+      font-size: 0.6rem;
+      color: var(--muted);
+      pointer-events: none;
+    }
+
+    /* Wheel */
+    .left-panel {
+      padding: 12px;
+      border-radius: var(--radius-lg);
+      background: radial-gradient(circle at top, rgba(15, 23, 42, 0.9), #020617);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      max-width: 520px;
+    }
+
+    .wheel-wrapper {
+      position: relative;
+      width: min(360px, 80vw);
+      aspect-ratio: 1/1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .wheel {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 8px solid rgba(15, 23, 42, 0.95);
+      box-shadow:
+        0 0 0 1px rgba(148, 163, 184, 0.5),
+        0 0 0 10px rgba(15, 23, 42, 0.9),
+        0 30px 60px rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #020617 0, #020617 40%, #111827 60%);
+      transition: transform 4s cubic-bezier(0.19, 1, 0.22, 1);
+      overflow: hidden;
+    }
+
+    .wheel::before {
+      content: "";
+      width: 20%;
+      height: 20%;
+      border-radius: 50%;
+      background: radial-gradient(circle at top, #f97316, #b45309);
+      box-shadow:
+        0 0 0 2px rgba(15, 23, 42, 1),
+        0 0 30px rgba(249, 115, 22, 0.7);
+      border: 3px solid rgba(248, 250, 252, 0.9);
+      z-index: 3;
+    }
+
+    /* 指针：现在尖端朝下，指向轮盘中心 */
+    .pointer {
+      position: absolute;
+      top: -2px;
+      width: 0;
+      height: 0;
+      border-left: 12px solid transparent;
+      border-right: 12px solid transparent;
+      border-top: 20px solid #f97316; /* triangle pointing down */
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.7));
+      z-index: 4;
+    }
+
+    .wheel-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform-origin: 50% 50%;
+      white-space: nowrap;
+      font-size: 0.8rem;              /* 比之前大一点 */
+      color: #f9fafb;
+      text-shadow: 0 0 4px rgba(0, 0, 0, 0.9);
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+
+    .spin-btn {
+      padding: 9px 24px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #0f172a;
+      background: linear-gradient(135deg, #f97316, #fb923c);
+      box-shadow:
+        0 14px 28px rgba(249, 115, 22, 0.4),
+        0 0 0 1px rgba(248, 250, 252, 0.4);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: transform 0.08s ease-out, box-shadow 0.08s ease-out,
+        filter 0.08s ease-out;
+    }
+
+    .spin-btn span.icon {
+      font-size: 1.2rem;
+    }
+
+    .spin-btn:hover {
+      transform: translateY(-1px) scale(1.015);
+      filter: brightness(1.05);
+      box-shadow:
+        0 18px 40px rgba(249, 115, 22, 0.6),
+        0 0 0 1px rgba(248, 250, 252, 0.6);
+    }
+
+    .spin-btn:active {
+      transform: translateY(1px) scale(0.99);
+      box-shadow:
+        0 8px 18px rgba(249, 115, 22, 0.5),
+        0 0 0 1px rgba(248, 250, 252, 0.6);
+    }
+
+    .spin-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .result {
+      text-align: center;
+      margin-top: 4px;
+    }
+
+    .result-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .result-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: radial-gradient(circle at top, rgba(248, 250, 252, 0.1), transparent),
+        rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      display: inline-block;
+      min-width: 160px;
+    }
+
+    .result-empty {
+      font-size: 0.85rem;
+      color: #f97373;
+    }
+
+    .hint {
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .hint strong {
+      color: #e5e7eb;
+    }
+
+    .chip-inline {
+      font-size: 0.75rem;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="title-group">
+        <h1>
+          美食轮盘
+          <span class="badge">Food Roulette</span>
+        </h1>
+        <p class="subtitle">选不了吃什么？交给命运啦 ✨</p>
+      </div>
+    </header>
+
+    <section class="controls">
+      <div class="controls-section">
+        <span>用餐：</span>
+        <div class="meal-toggle" id="mealToggle">
+          <button type="button" data-meal="lunch" class="active">
+            🌞 午餐
+          </button>
+          <button type="button" data-meal="dinner">
+            🌙 晚餐
+          </button>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <span>今天：</span>
+        <div class="select-wrapper">
+          <select id="daySelect">
+            <option value="1">星期一</option>
+            <option value="2">星期二</option>
+            <option value="3">星期三</option>
+            <option value="4">星期四</option>
+            <option value="5">星期五</option>
+            <option value="6">星期六</option>
+            <option value="0">星期日</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="controls-section">
+        <span>规则：</span>
+        <span class="chip-inline">只保留有开的店 ✅</span>
+      </div>
+    </section>
+
+    <section class="left-panel">
+      <div class="wheel-wrapper">
+        <div class="pointer"></div>
+        <div id="wheel" class="wheel">
+          <div id="wheelLabels"></div>
+        </div>
+      </div>
+      <button id="spinBtn" class="spin-btn">
+        <span class="icon">🎰</span>
+        <span>SPIN!</span>
+      </button>
+      <div class="result" id="resultBox">
+        <div class="result-label">结果 / Result</div>
+        <div class="result-empty" id="resultEmpty">先选择「有开」的店才能抽哦～ 🥲</div>
+        <div class="result-name" id="resultName" style="display:none;"></div>
+      </div>
+      <p class="hint">
+        ✏️ <strong>要改店名 / 营业时间：</strong>
+        打开 <strong>food-roulette.html</strong>，在最下面的 <code>PLACES</code> 里改。
+        （括号里的 mon/tue/wed/thurs/sun = 那天没开）
+      </p>
+    </section>
+  </div>
+
+  <script>
+    /**
+     * 店家资料设定
+     * day: 0=星期日, 1=星期一, ... 6=星期六
+     * lunch / dinner 数组里面填「有开的那几天」
+     */
+    const PLACES = [
+      {
+        name: "阿雄鸡饭",
+        schedule: {
+          lunch: [1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "芋头饭",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "咸粥",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "小猫鸭饭",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "48大板",
+        schedule: {
+          lunch: [0, 1, 2, 3, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "西刀林",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "面粉糕",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "好友鸡饭",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "盛大厨",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "状元米线",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "爷爷湖南菜",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "东京",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "美食香",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "美芳",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "砂煲鸡饭",
+        schedule: {
+          lunch: [0, 1, 2, 3, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "红中福建面",
+        schedule: {
+          lunch: [0, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "I MUM MUM",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "田传",
+        schedule: {
+          lunch: [0, 1, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "佳佳",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "Ah Hong",
+        schedule: {
+          lunch: [0, 1, 2, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "吴家庄",
+        schedule: {
+          lunch: [0, 1, 3, 4, 5, 6],
+          dinner: [0, 1, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "MALA MASTER",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "Inderawasih",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "Chai Leng Park",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "咖喱鱼头",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "小李酸菜鱼",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "唐小龙",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "Empat Sekawan",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "Rutin",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "红屋",
+        schedule: {
+          lunch: [0, 1, 2, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "GuanSeng 粥",
+        schedule: {
+          lunch: [0, 1, 2, 3, 4, 5, 6],
+          dinner: []
+        }
+      },
+      {
+        name: "水晶宫tomyam",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "水晶宫砂煲鸡饭",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "水晶宫咖喱面",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "水晶宫大板",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "光华tomyam",
+        schedule: {
+          lunch: [],
+          dinner: [0, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "朝阳",
+        schedule: {
+          lunch: [],
+          dinner: [0, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "旺来",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 5, 6]
+        }
+      },
+      {
+        name: "夜来香炒粿条",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 5, 6]
+        }
+      },
+      {
+        name: "红辣椒",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "Burger malas",
+        schedule: {
+          lunch: [],
+          dinner: [1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "juheng",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "bak kut teh",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 5, 6]
+        }
+      },
+      {
+        name: "麻辣大伯公",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "晋铨",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "阿来",
+        schedule: {
+          lunch: [],
+          dinner: [0, 1, 2, 3, 4, 5, 6]
+        }
+      },
+      {
+        name: "咸鱼米粉",
+        schedule: {
+          lunch: [],
+          dinner: [0, 2, 3, 4, 5, 6]
+        }
+      }
+    ];
+
+    const wheel = document.getElementById("wheel");
+    const wheelLabels = document.getElementById("wheelLabels");
+    const spinBtn = document.getElementById("spinBtn");
+    const mealToggle = document.getElementById("mealToggle");
+    const daySelect = document.getElementById("daySelect");
+    const resultEmpty = document.getElementById("resultEmpty");
+    const resultName = document.getElementById("resultName");
+
+    let currentMeal = "lunch";
+    let currentDay = 1;
+    let filteredPlaces = [];
+    let isSpinning = false;
+    let currentRotation = 0;
+
+    const SLICE_COLORS = [
+      "#f97316",
+      "#10b981",
+      "#3b82f6",
+      "#ec4899",
+      "#eab308",
+      "#6366f1",
+      "#22c55e",
+      "#f97373"
+    ];
+
+    function initDaySelectDefault() {
+      const jsDay = new Date().getDay();
+      daySelect.value = jsDay.toString();
+      currentDay = jsDay;
+    }
+
+    function updateFilteredPlaces() {
+      filteredPlaces = PLACES.filter((p) =>
+        p.schedule[currentMeal].includes(currentDay)
+      );
+      updateWheelVisual();
+      updateResultState();
+    }
+
+    function updateWheelVisual() {
+      if (!filteredPlaces.length) {
+        wheel.style.background =
+          "radial-gradient(circle at center, #020617 0, #020617 40%, #111827 100%)";
+        wheelLabels.innerHTML = "";
+        return;
+      }
+
+      const count = filteredPlaces.length;
+      const angleStep = 360 / count;
+      const parts = [];
+
+      for (let i = 0; i < count; i++) {
+        const start = i * angleStep;
+        const end = (i + 1) * angleStep;
+        const color = SLICE_COLORS[i % SLICE_COLORS.length];
+        parts.push(`${color} ${start}deg ${end}deg`);
+      }
+
+      wheel.style.background = `conic-gradient(${parts.join(",")})`;
+      renderWheelLabels();
+    }
+
+    function renderWheelLabels() {
+      wheelLabels.innerHTML = "";
+      const count = filteredPlaces.length;
+      if (!count) return;
+
+      const angleStep = 360 / count;
+
+      // 根据数量微调字号
+      const baseSize = 14;
+      const size = Math.max(9, baseSize - Math.max(0, count - 8) * 0.3);
+
+      for (let i = 0; i < count; i++) {
+        const angle = i * angleStep + angleStep / 2;
+        const label = document.createElement("div");
+        label.className = "wheel-label";
+        label.textContent = filteredPlaces[i].name;
+        label.style.fontSize = `${size}px`;
+        // 往外一点 (-48%)，文字更靠近外圈
+        label.style.transform =
+          `rotate(${angle}deg) translate(0, -48%) rotate(${-angle}deg)`;
+        wheelLabels.appendChild(label);
+      }
+    }
+
+    function updateResultState() {
+      resultName.style.display = "none";
+      resultEmpty.style.display = filteredPlaces.length ? "none" : "block";
+    }
+
+    function spinWheel() {
+      if (!filteredPlaces.length || isSpinning) return;
+
+      isSpinning = true;
+      spinBtn.disabled = true;
+
+      const count = filteredPlaces.length;
+      const anglePerSlice = 360 / count;
+
+      const chosenIndex = Math.floor(Math.random() * count);
+      const randomWithinSlice = Math.random() * anglePerSlice;
+      const targetAngleFromTop = chosenIndex * anglePerSlice + randomWithinSlice;
+      const extraTurns = 4;
+      const finalRotation =
+        currentRotation +
+        extraTurns * 360 +
+        (360 - targetAngleFromTop);
+
+      wheel.style.transition = "transform 4s cubic-bezier(0.19,1,0.22,1)";
+      wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+      setTimeout(() => {
+        isSpinning = false;
+        spinBtn.disabled = false;
+        currentRotation = finalRotation % 360;
+
+        const chosenPlace = filteredPlaces[chosenIndex];
+        resultName.textContent = chosenPlace.name;
+        resultName.style.display = "inline-block";
+        resultEmpty.style.display = "none";
+      }, 4100);
+    }
+
+    mealToggle.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-meal]");
+      if (!btn) return;
+      const selected = btn.getAttribute("data-meal");
+      if (selected === currentMeal) return;
+
+      currentMeal = selected;
+      [...mealToggle.querySelectorAll("button")].forEach((b) =>
+        b.classList.toggle("active", b === btn)
+      );
+      updateFilteredPlaces();
+    });
+
+    daySelect.addEventListener("change", (e) => {
+      currentDay = Number(e.target.value);
+      updateFilteredPlaces();
+    });
+
+    spinBtn.addEventListener("click", spinWheel);
+
+    initDaySelectDefault();
+    updateFilteredPlaces();
+  </script>
+</body>
+</html>
